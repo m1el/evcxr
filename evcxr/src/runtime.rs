@@ -90,6 +90,37 @@ impl Runtime {
         Ok(())
     }
 
+    #[cfg(windows)]
+    pub fn install_crash_handlers(&self) {
+        use backtrace::Backtrace;
+        use winapi::um::winnt::{EXCEPTION_POINTERS};
+        use winapi::um::minwinbase::{EXCEPTION_ACCESS_VIOLATION, EXCEPTION_ILLEGAL_INSTRUCTION};
+        use winapi::um::errhandlingapi::{SetUnhandledExceptionFilter};
+
+        extern "system" fn exception_filter(pointers: *mut EXCEPTION_POINTERS) -> i32 {
+            let code = unsafe {
+                pointers.as_ref()
+                    .and_then(|ptrs| ptrs.ExceptionRecord.as_ref())
+                    .map(|record| record.ExceptionCode)
+            };
+            eprintln!(
+                "{}",
+                match code {
+                    Some(EXCEPTION_ACCESS_VIOLATION) => "Segmentation fault.",
+                    Some(EXCEPTION_ILLEGAL_INSTRUCTION) => "Illegal instruction.",
+                    _ => "Unexpected exception.",
+                }
+            );
+            eprintln!("{:?}", Backtrace::new());
+            std::process::abort();
+        }
+
+        unsafe {
+            SetUnhandledExceptionFilter(Some(exception_filter));
+        }
+    }
+
+    #[cfg(unix)]
     pub fn install_crash_handlers(&self) {
         use backtrace::Backtrace;
         use sig::ffi::Sig;

@@ -24,8 +24,11 @@ extern crate lazy_static;
 extern crate backtrace;
 extern crate libloading;
 extern crate rand;
+#[cfg(unix)]
 #[macro_use]
 extern crate sig;
+#[cfg(windows)]
+extern crate winapi;
 
 #[macro_use]
 mod errors;
